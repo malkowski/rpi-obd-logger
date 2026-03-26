@@ -45,7 +45,7 @@ def sort_key(cmd):
 def main():
 
     parser = argparse.ArgumentParser( description="Connect to an OBD-II adapter and dump all supported standard PIDs in a loop" )
-    parser.add_argument( "--interval", type=float,  default=2.0,  help="Seconds to wait between full polling passes (default: 2.0)" )
+    parser.add_argument( "--interval", type=float,  default=0.5,  help="Seconds to wait between full polling passes" )
     parser.add_argument( "--debug",    action="store_true",       help="Enable python-obd debug logging"  )
     args = parser.parse_args()
 
