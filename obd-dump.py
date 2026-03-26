@@ -79,14 +79,20 @@ def main():
         mode = getattr(cmd, "mode", None)
         name = getattr(cmd, "name", None)
 
-        if mode != "01":
+        if isinstance(mode, int):
+            mode_norm = f"{mode:02X}"
+        elif isinstance(mode, str):
+            mode_norm = mode.upper().zfill(2)
+        else:
+            mode_norm = None
+
+        if mode_norm != "01":
             continue
 
         if not name or name.lower() == "unsupported":
             continue
 
         standard_named.append(cmd)
-
     print(f"[{datetime.now().isoformat()}] supported named standard PIDs: {len(standard_named)}")
     for cmd in standard_named:
         desc = getattr(cmd, "desc", "")
