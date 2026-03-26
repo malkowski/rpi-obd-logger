@@ -31,42 +31,14 @@ def fmt_response(response):
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="Connect to an OBD-II adapter and dump all supported standard PIDs in a loop"
-    )
-    parser.add_argument(
-        "--device",
-        required=True,
-        help="Serial device path, e.g. /dev/ttyUSB0",
-    )
-    parser.add_argument(
-        "--interval",
-        type=float,
-        default=2.0,
-        help="Seconds to wait between full polling passes (default: 2.0)",
-    )
-    parser.add_argument(
-        "--baudrate",
-        type=int,
-        default=None,
-        help="Optional serial baud rate override",
-    )
-    parser.add_argument(
-        "--timeout",
-        type=float,
-        default=0.2,
-        help="OBD query timeout in seconds (default: 0.2)",
-    )
-    parser.add_argument(
-        "--no-fast",
-        action="store_true",
-        help="Disable python-obd fast mode",
-    )
-    parser.add_argument(
-        "--debug",
-        action="store_true",
-        help="Enable python-obd debug logging",
-    )
+
+    parser = argparse.ArgumentParser( description="Connect to an OBD-II adapter and dump all supported standard PIDs in a loop" )
+    parser.add_argument( "--device",   required=True,             help="Serial device path, e.g. /dev/ttyUSB0" )
+    parser.add_argument( "--interval", type=float,  default=2.0,  help="Seconds to wait between full polling passes (default: 2.0)" )
+    parser.add_argument( "--baudrate", type=int,    default=None, help="Optional serial baud rate override" )
+    parser.add_argument( "--timeout",  type=float,  default=0.2,  help="OBD query timeout in seconds (default: 0.2)" )
+    parser.add_argument( "--no-fast",  action="store_true",       help="Disable python-obd fast mode" )
+    parser.add_argument( "--debug",    action="store_true",       help="Enable python-obd debug logging"  )
     args = parser.parse_args()
 
     if args.debug:
