@@ -1,0 +1,148 @@
+#!/usr/bin/env python3
+
+import argparse
+import signal
+import sys
+import time
+from datetime import datetime
+
+import obd
+from obd import OBDStatus
+
+running = True
+
+
+def handle_signal(signum, frame):
+    global running
+    running = False
+
+
+def fmt_response(response):
+    if response is None:
+        return "no response object"
+
+    if response.is_null():
+        return "null / unsupported / no data"
+
+    if response.value is None:
+        return "no parsed value"
+
+    return str(response.value)
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="Connect to an OBD-II adapter and dump all supported standard PIDs in a loop"
+    )
+    parser.add_argument(
+        "--device",
+        required=True,
+        help="Serial device path, e.g. /dev/ttyUSB0",
+    )
+    parser.add_argument(
+        "--interval",
+        type=float,
+        default=2.0,
+        help="Seconds to wait between full polling passes (default: 2.0)",
+    )
+    parser.add_argument(
+        "--baudrate",
+        type=int,
+        default=None,
+        help="Optional serial baud rate override",
+    )
+    parser.add_argument(
+        "--timeout",
+        type=float,
+        default=0.2,
+        help="OBD query timeout in seconds (default: 0.2)",
+    )
+    parser.add_argument(
+        "--no-fast",
+        action="store_true",
+        help="Disable python-obd fast mode",
+    )
+    parser.add_argument(
+        "--debug",
+        action="store_true",
+        help="Enable python-obd debug logging",
+    )
+    args = parser.parse_args()
+
+    if args.debug:
+        obd.logger.setLevel(obd.logging.DEBUG)
+
+    signal.signal(signal.SIGINT, handle_signal)
+    signal.signal(signal.SIGTERM, handle_signal)
+
+    print(f"[{datetime.now().isoformat()}] connecting to {args.device}")
+
+    connection = obd.OBD(
+        portstr=args.device,
+        baudrate=args.baudrate,
+        fast=not args.no_fast,
+        timeout=args.timeout,
+    )
+
+    status = connection.status()
+    print(f"[{datetime.now().isoformat()}] connection status: {status}")
+
+    if status != OBDStatus.CAR_CONNECTED:
+        print("did not reach CAR_CONNECTED")
+        print("things to check:")
+        print("- ignition on")
+        print("- adapter visible at the specified tty")
+        print("- no other process already has the device open")
+        print("- try --no-fast")
+        print("- try a different baudrate if needed")
+        connection.close()
+        sys.exit(1)
+
+    supported = sorted(
+        list(connection.supported_commands),
+        key=lambda cmd: (getattr(cmd, "mode", ""), getattr(cmd, "pid", ""), cmd.name),
+    )
+
+    # Keep only named standard commands.
+    # For v0, that means Mode 01 PIDs with a non-placeholder name.
+    standard_named = []
+    for cmd in supported:
+        mode = getattr(cmd, "mode", None)
+        name = getattr(cmd, "name", None)
+
+        if mode != "01":
+            continue
+
+        if not name or name.lower() == "unsupported":
+            continue
+
+        standard_named.append(cmd)
+
+    print(f"[{datetime.now().isoformat()}] supported named standard PIDs: {len(standard_named)}")
+    for cmd in standard_named:
+        desc = getattr(cmd, "desc", "")
+        print(f"  {cmd.name:<30} mode={cmd.mode} pid={cmd.pid} desc={desc}")
+
+    print("\nstarting poll loop; ctrl-c to stop\n")
+
+    try:
+        while running:
+            loop_ts = datetime.now().isoformat()
+            print(f"\n[{loop_ts}] --- poll start ---")
+
+            for cmd in standard_named:
+                try:
+                    response = connection.query(cmd)
+                    print(f"[{loop_ts}] {cmd.name:<30} {fmt_response(response)}")
+                except Exception as exc:
+                    print(f"[{loop_ts}] {cmd.name:<30} ERROR: {exc}")
+
+            time.sleep(args.interval)
+
+    finally:
+        print(f"\n[{datetime.now().isoformat()}] closing connection")
+        connection.close()
+
+
+if __name__ == "__main__":
+    main()
