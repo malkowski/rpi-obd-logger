@@ -30,6 +30,18 @@ def fmt_response(response):
     return str(response.value)
 
 
+def sort_key(cmd):
+    mode = getattr(cmd, "mode", None)
+    pid = getattr(cmd, "pid", None)
+    name = getattr(cmd, "name", "") or ""
+
+    # Normalize to consistent sortable types.
+    # Keep unknown values at the end.
+    mode_key = mode if isinstance(mode, str) else "ZZ"
+    pid_key = pid if isinstance(pid, int) else 999999
+
+    return (mode_key, pid_key, name)
+
 def main():
 
     parser = argparse.ArgumentParser( description="Connect to an OBD-II adapter and dump all supported standard PIDs in a loop" )
@@ -58,10 +70,7 @@ def main():
         connection.close()
         sys.exit(1)
 
-    supported = sorted(
-        list(connection.supported_commands),
-        key=lambda cmd: (getattr(cmd, "mode", ""), getattr(cmd, "pid", ""), cmd.name),
-    )
+    supported = sorted(list(connection.supported_commands), key=sort_key)
 
     # Keep only named standard commands.
     # For v0, that means Mode 01 PIDs with a non-placeholder name.
