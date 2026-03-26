@@ -33,11 +33,7 @@ def fmt_response(response):
 def main():
 
     parser = argparse.ArgumentParser( description="Connect to an OBD-II adapter and dump all supported standard PIDs in a loop" )
-    parser.add_argument( "--device",   required=True,             help="Serial device path, e.g. /dev/ttyUSB0" )
     parser.add_argument( "--interval", type=float,  default=2.0,  help="Seconds to wait between full polling passes (default: 2.0)" )
-    parser.add_argument( "--baudrate", type=int,    default=None, help="Optional serial baud rate override" )
-    parser.add_argument( "--timeout",  type=float,  default=0.2,  help="OBD query timeout in seconds (default: 0.2)" )
-    parser.add_argument( "--no-fast",  action="store_true",       help="Disable python-obd fast mode" )
     parser.add_argument( "--debug",    action="store_true",       help="Enable python-obd debug logging"  )
     args = parser.parse_args()
 
@@ -47,15 +43,9 @@ def main():
     signal.signal(signal.SIGINT, handle_signal)
     signal.signal(signal.SIGTERM, handle_signal)
 
-    print(f"[{datetime.now().isoformat()}] connecting to {args.device}")
+    print(f"[{datetime.now().isoformat()}] connecting")
 
-    connection = obd.OBD(
-        portstr=args.device,
-        baudrate=args.baudrate,
-        fast=not args.no_fast,
-        timeout=args.timeout,
-    )
-
+    connection = obd.OBD()
     status = connection.status()
     print(f"[{datetime.now().isoformat()}] connection status: {status}")
 
@@ -63,10 +53,8 @@ def main():
         print("did not reach CAR_CONNECTED")
         print("things to check:")
         print("- ignition on")
-        print("- adapter visible at the specified tty")
+        print("- adapter visible in /dev")
         print("- no other process already has the device open")
-        print("- try --no-fast")
-        print("- try a different baudrate if needed")
         connection.close()
         sys.exit(1)
 
